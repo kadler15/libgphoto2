@@ -83,6 +83,7 @@ LIBGPHOTO2_INTERNAL {
 	gp_port_info_set_name;
 	gp_port_info_set_path;
 	gp_port_info_set_type;
+	gp_libltdl_mutex;
 };
 
 #LIBGPHOTO2_6_0 {

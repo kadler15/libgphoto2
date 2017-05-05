@@ -38,6 +38,7 @@ libgphoto2_port_la_LIBADD = \
 #	"-dlopen" $(top_builddir)/usb/....la
 
 libgphoto2_port_la_SOURCES =		\
+	gphoto2-mutex.c	\
 	gphoto2-port-info-list.c	\
 	gphoto2-port-info.h		\
 	gphoto2-port-log.c		\
@@ -47,6 +48,7 @@ libgphoto2_port_la_SOURCES =		\
 	gphoto2-port-result.c
 
 libgphoto2_port_la_DEPENDENCIES = \
+	$(top_srcdir)/gphoto2/gphoto2-mutex.h		\
 	$(top_srcdir)/gphoto2/gphoto2-port-version.h		\
 	$(top_srcdir)/gphoto2/gphoto2-port-library.h		\
 	$(srcdir)/libgphoto2_port.ver

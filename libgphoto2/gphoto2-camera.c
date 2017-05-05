@@ -37,6 +37,7 @@
 #include <gphoto2/gphoto2-result.h>
 #include <gphoto2/gphoto2-library.h>
 #include <gphoto2/gphoto2-port-log.h>
+#include <gphoto2/gphoto2-mutex.h>
 
 #ifdef ENABLE_NLS
 #  include <libintl.h>
@@ -294,8 +295,10 @@ gp_camera_exit (Camera *camera, GPContext *context)
 
 	if (camera->pc->lh) {
 #if !defined(VALGRIND)
+		pthread_mutex_lock(&gp_libltdl_mutex);
 		lt_dlclose (camera->pc->lh);
 		lt_dlexit ();
+		pthread_mutex_unlock(&gp_libltdl_mutex);
 #endif
 		camera->pc->lh = NULL;
 	}
@@ -792,21 +795,29 @@ gp_camera_init (Camera *camera, GPContext *context)
 
 	/* Load the library. */
 	GP_LOG_D ("Loading '%s'...", camera->pc->a.library);
+	pthread_mutex_lock(&gp_libltdl_mutex);
 	lt_dlinit ();
 	camera->pc->lh = lt_dlopenext (camera->pc->a.library);
+	pthread_mutex_unlock(&gp_libltdl_mutex);
 	if (!camera->pc->lh) {
+		pthread_mutex_lock(&gp_libltdl_mutex);
 		gp_context_error (context, _("Could not load required "
 			"camera driver '%s' (%s)."), camera->pc->a.library,
 			lt_dlerror ());
 		lt_dlexit ();
+		pthread_mutex_unlock(&gp_libltdl_mutex);
 		return (GP_ERROR_LIBRARY);
 	}
 
 	/* Initialize the camera */
+	pthread_mutex_lock(&gp_libltdl_mutex);
 	init_func = lt_dlsym (camera->pc->lh, "camera_init");
+	pthread_mutex_unlock(&gp_libltdl_mutex);
 	if (!init_func) {
+		pthread_mutex_lock(&gp_libltdl_mutex);
 		lt_dlclose (camera->pc->lh);
 		lt_dlexit ();
+		pthread_mutex_unlock(&gp_libltdl_mutex);
 		camera->pc->lh = NULL;
 		gp_context_error (context, _("Camera driver '%s' is "
 			"missing the 'camera_init' function."), 
@@ -817,8 +828,10 @@ gp_camera_init (Camera *camera, GPContext *context)
 	if (strcasecmp (camera->pc->a.model, "Directory Browse")) {
 		result = gp_port_open (camera->port);
 		if (result < 0) {
+			pthread_mutex_lock(&gp_libltdl_mutex);
 			lt_dlclose (camera->pc->lh);
 			lt_dlexit ();
+			pthread_mutex_unlock(&gp_libltdl_mutex);
 			camera->pc->lh = NULL;
 			return (result);
 		}
@@ -827,8 +840,10 @@ gp_camera_init (Camera *camera, GPContext *context)
 	result = init_func (camera, context);
 	if (result < 0) {
 		gp_port_close (camera->port);
+		pthread_mutex_lock(&gp_libltdl_mutex);
 		lt_dlclose (camera->pc->lh);
 		lt_dlexit ();
+		pthread_mutex_unlock(&gp_libltdl_mutex);
 		camera->pc->lh = NULL;
 		memset (camera->functions, 0, sizeof (CameraFunctions));
 		return (result);
